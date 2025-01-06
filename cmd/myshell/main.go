@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
-
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Fprint
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
@@ -22,14 +20,37 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Remove newline character from input
-		input = strings.TrimSpace(input)
+		command, args := getCmdAndArgs(input)
 
-		switch input {
-		case "exit 0":
-			os.Exit(0)
-		default:
-			fmt.Printf("%s: command not found\n", input)
-		}
+		handleCommand(command, args)
 	}
+}
+
+func handleCommand(command string, args []string) {
+	switch command {
+	case "exit":
+		if len(args) > 0 {
+			exitCode, err := strconv.Atoi(args[0])
+			if err != nil {
+				os.Exit(1)
+			}
+			os.Exit(exitCode)
+		} else {
+			os.Exit(0)
+		}
+	case "echo":
+		fmt.Println(strings.Join(args, " "))
+	default:
+		fmt.Println(command + ": command not found")
+	}
+}
+
+func getCmdAndArgs(input string) (string, []string) {
+	// Ok so we are trimming space cause it also trims the space from the beginning, which sometimes
+	// causes the command to be empty (space)
+	input = strings.TrimSpace(input)
+
+	args := strings.Split(input, " ")
+
+	return strings.TrimSpace(args[0]), args[1:]
 }
