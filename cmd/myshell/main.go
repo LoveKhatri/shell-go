@@ -40,6 +40,13 @@ func handleCommand(command string, args []string) {
 		}
 	case "echo":
 		fmt.Println(strings.Join(args, " "))
+	case "type":
+		switch args[0] {
+		case "type", "echo", "exit":
+			fmt.Println(args[0] + " is a shell builtin")
+		default:
+			fmt.Println(args[0] + ": not found")
+		}
 	default:
 		fmt.Println(command + ": command not found")
 	}
