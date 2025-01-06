@@ -25,7 +25,11 @@ func main() {
 		// Remove newline character from input
 		input = strings.TrimSpace(input)
 
-		// Print Invalid command
-		fmt.Printf("%s: command not found\n", input)
+		switch input {
+		case "exit 0":
+			os.Exit(0)
+		default:
+			fmt.Printf("%s: command not found\n", input)
+		}
 	}
 }
