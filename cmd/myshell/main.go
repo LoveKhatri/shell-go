@@ -67,6 +67,7 @@ func initCommands() {
 	builtInCommands["type"] = typeCommand
 	builtInCommands["exit"] = exitCommand
 	builtInCommands["echo"] = echoCommand
+	builtInCommands["pwd"] = pwdCommand
 }
 
 func typeCommand(args []string) error {
@@ -124,4 +125,13 @@ func handleError(err error) error {
 	}
 
 	return nil
+}
+
+func pwdCommand(args []string) error {
+	dir, err := os.Getwd()
+	err = handleError(err)
+
+	fmt.Println(dir)
+
+	return err
 }
