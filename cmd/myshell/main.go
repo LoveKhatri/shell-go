@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -28,9 +29,24 @@ func main() {
 			err := handler(args)
 			handleError(err)
 		} else {
-			fmt.Println(command + ": command not found")
+			err := handleExecutables(command, args)
+			if err != nil {
+				fmt.Println(command + ": command not found")
+			}
 		}
 	}
+}
+
+func handleExecutables(command string, args []string) error {
+	cmd := exec.Command(command, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getCmdAndArgs(input string) (string, []string) {
