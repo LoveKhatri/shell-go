@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -141,16 +142,14 @@ func cdCommand(args []string) {
 
 	pathInput := path.Clean(args[0])
 
-	// If the path is not absolute, we need to make it absolute,
-	// cause issues with relative paths in multithreaded systems
-	if !path.IsAbs(pathInput) {
-		pwd, err := os.Getwd()
+	if strings.HasPrefix(pathInput, "~") {
+		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println("cd: " + pathInput + ": No such file or directory")
 			return
 		}
 
-		pathInput = path.Join(pwd, pathInput)
+		pathInput = filepath.Join(home, strings.TrimPrefix(pathInput, "~"))
 	}
 
 	err := os.Chdir(pathInput)
