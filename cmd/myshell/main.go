@@ -26,8 +26,7 @@ func main() {
 		command, args := getCmdAndArgs(input)
 
 		if handler, ok := builtInCommands[command]; ok {
-			err := handler(args)
-			handleError(err)
+			handler(args)
 		} else {
 			err := handleExecutables(command, args)
 			if err != nil {
@@ -59,7 +58,7 @@ func getCmdAndArgs(input string) (string, []string) {
 	return strings.TrimSpace(args[0]), args[1:]
 }
 
-type CommandHandler func(args []string) error
+type CommandHandler func(args []string)
 
 var builtInCommands = make(map[string]CommandHandler)
 
@@ -68,9 +67,10 @@ func initCommands() {
 	builtInCommands["exit"] = exitCommand
 	builtInCommands["echo"] = echoCommand
 	builtInCommands["pwd"] = pwdCommand
+	builtInCommands["cd"] = cdCommand
 }
 
-func typeCommand(args []string) error {
+func typeCommand(args []string) {
 	if len(args) == 0 {
 		fmt.Println("")
 	}
@@ -80,7 +80,7 @@ func typeCommand(args []string) error {
 	// First we check if the command is builtin command, if yes then return from func
 	if builtin {
 		fmt.Println(args[0] + " is a shell builtin")
-		return nil
+		return
 	}
 
 	// If the command is not a builtin command we then check if it is an executable
@@ -90,16 +90,14 @@ func typeCommand(args []string) error {
 
 		if _, err := os.Stat(fullPath); err == nil {
 			fmt.Println(args[0] + " is " + fullPath)
-			return nil
+			return
 		}
 	}
 
 	fmt.Println(args[0] + " not found")
-
-	return nil
 }
 
-func exitCommand(args []string) error {
+func exitCommand(args []string) {
 	if len(args) > 0 {
 		exitCode, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -109,29 +107,45 @@ func exitCommand(args []string) error {
 	} else {
 		os.Exit(0)
 	}
-	return nil
 }
 
-func echoCommand(args []string) error {
+func echoCommand(args []string) {
 	_, err := fmt.Println(strings.Join(args, " "))
 
-	return handleError(err)
-}
-
-func handleError(err error) error {
 	if err != nil {
 		fmt.Println("Error: ", err)
-		return err
 	}
 
-	return nil
 }
 
-func pwdCommand(args []string) error {
+func handleError(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+}
+
+func pwdCommand(args []string) {
 	dir, err := os.Getwd()
-	err = handleError(err)
+	handleError(err)
 
 	fmt.Println(dir)
 
-	return err
+}
+
+func cdCommand(args []string) {
+	if len(args) == 0 {
+		fmt.Println("cd: missing argument")
+	}
+
+	pathInput := args[0]
+
+	// ! Absolute Path (/user/folder/file)
+	if strings.HasPrefix(pathInput, "/") {
+		err := os.Chdir(pathInput)
+		if err != nil {
+			fmt.Println("cd: " + pathInput + ": No such file or directory")
+			return
+		}
+	}
 }
