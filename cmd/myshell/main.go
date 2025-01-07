@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -138,14 +139,24 @@ func cdCommand(args []string) {
 		fmt.Println("cd: missing argument")
 	}
 
-	pathInput := args[0]
+	pathInput := path.Clean(args[0])
 
-	// ! Absolute Path (/user/folder/file)
-	if strings.HasPrefix(pathInput, "/") {
-		err := os.Chdir(pathInput)
+	// If the path is not absolute, we need to make it absolute,
+	// cause issues with relative paths in multithreaded systems
+	if !path.IsAbs(pathInput) {
+		pwd, err := os.Getwd()
 		if err != nil {
 			fmt.Println("cd: " + pathInput + ": No such file or directory")
 			return
 		}
+
+		pathInput = path.Join(pwd, pathInput)
+	}
+
+	err := os.Chdir(pathInput)
+
+	if err != nil {
+		fmt.Println("cd: " + pathInput + ": No such file or directory")
+		return
 	}
 }
