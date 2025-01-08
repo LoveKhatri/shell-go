@@ -42,17 +42,16 @@ func handleExecutables(command string, args []string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("failed to execute: %v: %v", command, err)
 	}
 
 	return nil
 }
 
 func getCmdAndArgs(input string) (string, []string) {
-	// Ok so we are trimming space cause it also trims the space from the beginning,
-	// which sometimes causes the command to be empty (space)
 	input = strings.TrimSpace(input)
 	var args []string
 	var currentArg strings.Builder
@@ -62,14 +61,8 @@ func getCmdAndArgs(input string) (string, []string) {
 
 	for _, char := range input {
 		if escapeNext {
-			// Handle escaped characters within double quotes
-			if inDoubleQuotes && (char == '\\' || char == '$' || char == '"' || char == '\n') {
-				currentArg.WriteRune(char)
-			} else {
-				// Handle escaped characters outside of double quotes
-				currentArg.WriteRune('\\')
-				currentArg.WriteRune(char)
-			}
+			// Handle escaped characters
+			currentArg.WriteRune(char)
 			escapeNext = false
 			continue
 		}
@@ -77,12 +70,16 @@ func getCmdAndArgs(input string) (string, []string) {
 		switch char {
 		case '\\':
 			if inDoubleQuotes {
+				currentArg.WriteRune(char)
+			} else {
 				escapeNext = true
+			}
+		case '"':
+			if !inSingleQuotes {
+				inDoubleQuotes = !inDoubleQuotes
 			} else {
 				currentArg.WriteRune(char)
 			}
-		case '"':
-			inDoubleQuotes = !inDoubleQuotes
 		case '\'':
 			if !inDoubleQuotes {
 				inSingleQuotes = !inSingleQuotes
@@ -111,7 +108,7 @@ func getCmdAndArgs(input string) (string, []string) {
 		return "", nil
 	}
 
-	return strings.TrimSpace(args[0]), args[1:]
+	return args[0], args[1:]
 }
 
 type CommandHandler func(args []string)
