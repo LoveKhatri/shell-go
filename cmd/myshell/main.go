@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -27,6 +28,26 @@ func main() {
 
 		command, args := getCmdAndArgs(input)
 
+		if slices.Contains(args, ">") {
+			handleRedirection(command, args, ">")
+			continue
+		} else if slices.Contains(args, "1>") {
+			handleRedirection(command, args, "1>")
+			continue
+		} else if slices.Contains(args, "2>") {
+			handleRedirection(command, args, "2>")
+			continue
+		} else if slices.Contains(args, ">>") {
+			handleRedirection(command, args, ">>")
+			continue
+		} else if slices.Contains(args, "1>>") {
+			handleRedirection(command, args, "1>>")
+			continue
+		} else if slices.Contains(args, "2>>") {
+			handleRedirection(command, args, "2>>")
+			continue
+		}
+
 		if handler, ok := builtInCommands[command]; ok {
 			handler(args)
 		} else {
@@ -36,6 +57,60 @@ func main() {
 			}
 		}
 	}
+}
+
+func handleRedirection(command string, args []string, separator string) error {
+	// Find the index of the redirection operator in the args
+	index := slices.Index(args, separator)
+	if index < 0 || index+1 >= len(args) {
+		return fmt.Errorf("redirection operator missing a valid file argument")
+	}
+
+	// Save the file name and remove both operator and name from args
+	fileName := strings.TrimSpace(args[index+1])
+	args = append(args[:index], args[index+2:]...)
+
+	// Decide whether it's an append or truncate
+	isAppend := false
+	if strings.Contains(separator, ">>") {
+		isAppend = true
+	}
+
+	// Determine the correct flags
+	var flags int
+	if isAppend {
+		// Append mode
+		flags = os.O_WRONLY | os.O_APPEND | os.O_CREATE
+	} else {
+		// Truncate (overwrite) mode
+		flags = os.O_WRONLY | os.O_TRUNC | os.O_CREATE
+	}
+
+	// Attempt to open with the chosen flags
+	file, err := os.OpenFile(fileName, flags, 0666)
+	if err != nil {
+		return fmt.Errorf("failed to open or create file %s: %v", fileName, err)
+	}
+	defer file.Close()
+
+	cmd := exec.Command(command, args...)
+
+	// Redirect to stdout or stderr
+	if separator == "2>" || separator == "2>>" {
+		cmd.Stderr = file
+	} else {
+		// Covers ">", "1>", ">>", "1>>"
+		cmd.Stdout = file
+	}
+
+	cmd.Stderr = os.Stderr
+
+	// Run the command
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed executing command %s: %v", command, err)
+	}
+
+	return nil
 }
 
 func handleExecutables(command string, args []string) error {
