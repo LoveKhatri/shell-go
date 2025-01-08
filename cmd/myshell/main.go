@@ -69,7 +69,7 @@ func getCmdAndArgs(input string) (string, []string) {
 
 		switch char {
 		case '\\':
-			if inDoubleQuotes {
+			if inDoubleQuotes || inSingleQuotes {
 				currentArg.WriteRune(char)
 			} else {
 				escapeNext = true
