@@ -98,12 +98,12 @@ func handleRedirection(command string, args []string, separator string) error {
 	// Redirect to stdout or stderr
 	if separator == "2>" || separator == "2>>" {
 		cmd.Stderr = file
+		cmd.Stdout = os.Stdout
 	} else {
 		// Covers ">", "1>", ">>", "1>>"
+		cmd.Stderr = os.Stderr
 		cmd.Stdout = file
 	}
-
-	cmd.Stderr = os.Stderr
 
 	// Run the command
 	if err := cmd.Run(); err != nil {
