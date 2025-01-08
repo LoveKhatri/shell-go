@@ -51,11 +51,38 @@ func handleExecutables(command string, args []string) error {
 }
 
 func getCmdAndArgs(input string) (string, []string) {
-	// Ok so we are trimming space cause it also trims the space from the beginning, which sometimes
-	// causes the command to be empty (space)
+	// Ok so we are trimming space cause it also trims the space from the beginning,
+	// which sometimes causes the command to be empty (space)
 	input = strings.TrimSpace(input)
+	var args []string
+	var currentArg strings.Builder
+	var inSingleQuotes bool
 
-	args := strings.Split(input, " ")
+	for _, char := range input {
+		switch char {
+		case '\'':
+			inSingleQuotes = !inSingleQuotes
+		case ' ':
+			if inSingleQuotes {
+				currentArg.WriteRune(char)
+			} else {
+				if currentArg.Len() > 0 {
+					args = append(args, currentArg.String())
+					currentArg.Reset()
+				}
+			}
+		default:
+			currentArg.WriteRune(char)
+		}
+	}
+
+	if currentArg.Len() > 0 {
+		args = append(args, currentArg.String())
+	}
+
+	if len(args) == 0 {
+		return "", nil
+	}
 
 	return strings.TrimSpace(args[0]), args[1:]
 }
