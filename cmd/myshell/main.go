@@ -57,13 +57,40 @@ func getCmdAndArgs(input string) (string, []string) {
 	var args []string
 	var currentArg strings.Builder
 	var inSingleQuotes bool
+	var inDoubleQuotes bool
+	var escapeNext bool
 
 	for _, char := range input {
+		if escapeNext {
+			// Handle escaped characters within double quotes
+			if inDoubleQuotes && (char == '\\' || char == '$' || char == '"' || char == '\n') {
+				currentArg.WriteRune(char)
+			} else {
+				// Handle escaped characters outside of double quotes
+				currentArg.WriteRune('\\')
+				currentArg.WriteRune(char)
+			}
+			escapeNext = false
+			continue
+		}
+
 		switch char {
+		case '\\':
+			if inDoubleQuotes {
+				escapeNext = true
+			} else {
+				currentArg.WriteRune(char)
+			}
+		case '"':
+			inDoubleQuotes = !inDoubleQuotes
 		case '\'':
-			inSingleQuotes = !inSingleQuotes
+			if !inDoubleQuotes {
+				inSingleQuotes = !inSingleQuotes
+			} else {
+				currentArg.WriteRune(char)
+			}
 		case ' ':
-			if inSingleQuotes {
+			if inSingleQuotes || inDoubleQuotes {
 				currentArg.WriteRune(char)
 			} else {
 				if currentArg.Len() > 0 {
