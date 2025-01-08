@@ -53,15 +53,23 @@ func handleExecutables(command string, args []string) error {
 
 func getCmdAndArgs(input string) (string, []string) {
 	input = strings.TrimSpace(input)
-	var args []string
-	var currentArg strings.Builder
-	var inSingleQuotes bool
-	var inDoubleQuotes bool
-	var escapeNext bool
 
-	for _, char := range input {
+	var (
+		args           []string
+		currentArg     strings.Builder
+		inSingleQuotes bool
+		inDoubleQuotes bool
+		escapeNext     bool
+	)
+
+	// Convert to a slice for lookahead capability
+	runes := []rune(input)
+
+	for i := 0; i < len(runes); i++ {
+		char := runes[i]
+
 		if escapeNext {
-			// Handle escaped characters
+			// If we were escaping, just add the character literally
 			currentArg.WriteRune(char)
 			escapeNext = false
 			continue
@@ -69,24 +77,49 @@ func getCmdAndArgs(input string) (string, []string) {
 
 		switch char {
 		case '\\':
-			if inDoubleQuotes || inSingleQuotes {
+			if inSingleQuotes {
+				// Inside single quotes, backslash is literal
 				currentArg.WriteRune(char)
+			} else if inDoubleQuotes {
+				// Inside double quotes, check next character
+				if i+1 < len(runes) {
+					nextChar := runes[i+1]
+					// Special meaning if nextChar is one of \, $, ", or a newline
+					if nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n' {
+						escapeNext = true
+					} else {
+						// Otherwise it's literal
+						currentArg.WriteRune(char)
+					}
+				} else {
+					// Backslash at the end
+					currentArg.WriteRune(char)
+				}
 			} else {
+				// Outside of quotes, backslash escapes next char
 				escapeNext = true
 			}
-		case '"':
-			if !inSingleQuotes {
-				inDoubleQuotes = !inDoubleQuotes
-			} else {
-				currentArg.WriteRune(char)
-			}
+
 		case '\'':
 			if !inDoubleQuotes {
+				// Toggle single quotes if not in double quotes
 				inSingleQuotes = !inSingleQuotes
 			} else {
+				// If in double quotes, treat it as literal
 				currentArg.WriteRune(char)
 			}
+
+		case '"':
+			if !inSingleQuotes {
+				// Toggle double quotes if not in single quotes
+				inDoubleQuotes = !inDoubleQuotes
+			} else {
+				// If in single quotes, treat it as literal
+				currentArg.WriteRune(char)
+			}
+
 		case ' ':
+			// Space splits arguments only if we are not in quotes
 			if inSingleQuotes || inDoubleQuotes {
 				currentArg.WriteRune(char)
 			} else {
@@ -95,15 +128,19 @@ func getCmdAndArgs(input string) (string, []string) {
 					currentArg.Reset()
 				}
 			}
+
 		default:
+			// Normal character, just add to current argument
 			currentArg.WriteRune(char)
 		}
 	}
 
+	// Add the last argument if present
 	if currentArg.Len() > 0 {
 		args = append(args, currentArg.String())
 	}
 
+	// If nothing was parsed, return no command
 	if len(args) == 0 {
 		return "", nil
 	}
